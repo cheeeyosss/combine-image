@@ -3,32 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gabung Gambar & Komen Jadi Satu JPEG | Combine Image</title>
-<meta name="description" content="Gabungkan 3, 4 atau lebih gambar bersama komen menjadi satu fail JPEG yang kemas. Semua proses dibuat terus dalam pelayar anda — gambar tidak dimuat naik ke server.">
+<title>Gabung Beberapa Gambar + Komen Jadi Satu JPEG</title>
+<meta name="description" content="Gabungkan beberapa gambar dan komen menjadi satu JPEG yang kemas. Semua proses dibuat terus dalam pelayar anda — gambar tidak dimuat naik ke server.">
 
-<!-- WhatsApp / Telegram / Facebook / general link preview -->
+<!-- WhatsApp / Telegram / Facebook link preview -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://combine-image.ceos.workers.dev/">
-<meta property="og:site_name" content="Combine Image">
 <meta property="og:title" content="Gabung Gambar & Komen Jadi Satu JPEG">
 <meta property="og:description" content="Gabungkan beberapa gambar dan komen menjadi satu JPEG yang kemas. Proses 100% dalam pelayar — gambar anda tidak dimuat naik ke server.">
 <meta property="og:image" content="https://combine-image.ceos.workers.dev/share-preview.png">
 <meta property="og:image:secure_url" content="https://combine-image.ceos.workers.dev/share-preview.png">
 <meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1536">
-<meta property="og:image:height" content="1024">
 <meta property="og:image:alt" content="Gabung gambar dan komen menjadi satu JPEG">
 
-<!-- Twitter / X -->
+<!-- Telegram / other platforms -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Gabung Gambar & Komen Jadi Satu JPEG">
 <meta name="twitter:description" content="Gabungkan beberapa gambar dan komen menjadi satu JPEG. Semua proses dibuat terus dalam pelayar anda.">
 <meta name="twitter:image" content="https://combine-image.ceos.workers.dev/share-preview.png">
-<meta name="twitter:image:alt" content="Gabung gambar dan komen menjadi satu JPEG">
-
-<!-- Browser / mobile UI -->
-<meta name="theme-color" content="#16233F">
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -190,7 +182,23 @@ footer svg{flex:none;margin-top:2px;color:var(--ok);}
   </section>
 
   <section class="card">
-    <h2><span class="step-label">3</span>Semak Preview</h2>
+    <h2><span class="step-label">3</span>Latar Belakang (Pilihan)</h2>
+    <p class="sub">Upload gambar untuk jadi latar belakang penuh di bawah semua gambar &amp; komen. Ia akan auto dipotong (crop) untuk penuhi seluruh ruang tanpa ada bahagian putih kosong. Jika tidak diupload, latar akan kekal putih seperti biasa.</p>
+    <div class="dropzone" id="dz-bg" tabindex="0">
+      <input type="file" id="file-bg" accept="image/*">
+      <div class="dz-empty">
+        <svg class="dz-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/>
+          <path d="M21 16l-5-5-4 4-3-3-5 5"/>
+        </svg>
+        <div class="dz-label">Klik, seret, atau tampal (Ctrl+V) gambar latar</div>
+        <div class="dz-hint">Pilihan sahaja — jika kosong, latar akan kekal putih</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="step-label">4</span>Semak Preview</h2>
     <p class="sub">Susunan: Gambar 1 → Komen 1 → Gambar 2 → Komen 2 → ... Saiz keseluruhan gambar akan auto laras ikut bilangan gambar yang diupload.</p>
     <div class="preview-wrap">
       <div class="preview-empty" id="previewEmpty">Preview akan muncul di sini selepas anda upload sekurang-kurangnya satu gambar.</div>
@@ -199,7 +207,7 @@ footer svg{flex:none;margin-top:2px;color:var(--ok);}
   </section>
 
   <section class="card">
-    <h2><span class="step-label">4</span>Muat turun JPEG</h2>
+    <h2><span class="step-label">5</span>Muat turun JPEG</h2>
     <p class="sub">Fail JPEG resolusi tinggi, sedia untuk dihantar atau dikongsi.</p>
     <div class="actions">
       <button class="primary" id="btnGenerate" disabled>
@@ -250,6 +258,81 @@ const ribbonDarknessValue = document.getElementById('ribbonDarknessValue');
 let watermarkEnabled = watermarkToggle.checked;
 let ribbonScale = (parseInt(ribbonScaleInput.value, 10) || 90) / 100;
 let ribbonDarkness = parseInt(ribbonDarknessInput.value, 10) || 80;
+
+// ---------- Background image ----------
+let bgImage = null;
+const dzBg = document.getElementById('dz-bg');
+const fileBg = document.getElementById('file-bg');
+
+function handleBgFile(file){
+  if (!file.type || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      bgImage = img;
+      renderBgDropzoneFilled(e.target.result);
+      updateState();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderBgDropzoneFilled(dataUrl){
+  dzBg.classList.add('filled');
+  dzBg.innerHTML = `
+    <img class="dz-preview" src="${dataUrl}" alt="Preview latar belakang">
+    <button class="dz-remove" type="button" aria-label="Buang latar belakang">&times;</button>
+  `;
+  dzBg.querySelector('.dz-remove').addEventListener('click', ev => {
+    ev.stopPropagation();
+    resetBgDropzone();
+  });
+}
+
+function resetBgDropzone(){
+  dzBg.classList.remove('filled');
+  dzBg.innerHTML = `
+    <div class="dz-empty">
+      <svg class="dz-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <circle cx="9" cy="10" r="2"/>
+        <path d="M21 16l-5-5-4 4-3-3-5 5"/>
+      </svg>
+      <div class="dz-label">Klik, seret, atau tampal (Ctrl+V) gambar latar</div>
+      <div class="dz-hint">Pilihan sahaja — jika kosong, latar akan kekal putih</div>
+    </div>
+  `;
+  fileBg.value = '';
+  bgImage = null;
+  setupBgDropzone();
+  updateState();
+}
+
+function setupBgDropzone(){
+  dzBg.addEventListener('click', () => fileBg.click());
+  dzBg.addEventListener('dragover', e => { e.preventDefault(); dzBg.classList.add('drag'); });
+  dzBg.addEventListener('dragleave', () => dzBg.classList.remove('drag'));
+  dzBg.addEventListener('drop', e => {
+    e.preventDefault();
+    dzBg.classList.remove('drag');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleBgFile(e.dataTransfer.files[0]);
+  });
+  fileBg.addEventListener('change', () => {
+    if (fileBg.files && fileBg.files[0]) handleBgFile(fileBg.files[0]);
+  });
+}
+setupBgDropzone();
+
+function drawBackgroundCover(ctx, img, W, H){
+  const scale = Math.max(W / img.width, H / img.height);
+  const w = img.width * scale;
+  const h = img.height * scale;
+  const dx = (W - w) / 2;
+  const dy = (H - h) / 2;
+  ctx.drawImage(img, dx, dy, w, h);
+}
 
 function getTujuanText(){
   const val = tujuanInput.value.trim();
@@ -466,6 +549,7 @@ btnAddSlot.addEventListener('click', () => {
 
 function findFocusedSlotId(){
   const active = document.activeElement;
+  if (active && active.id === 'dz-bg') return 'bg';
   if (active && active.classList && active.classList.contains('dropzone')) {
     const idStr = active.id.replace('dz-', '');
     const id = parseInt(idStr, 10);
@@ -486,9 +570,16 @@ document.addEventListener('paste', (e) => {
 
   e.preventDefault();
 
-  // Prefer whichever dropzone is focused/clicked into; otherwise use the next empty slot;
+  const focused = findFocusedSlotId();
+  if (focused === 'bg') {
+    const file = imageItem.getAsFile();
+    if (file) handleBgFile(file);
+    return;
+  }
+
+  // Prefer whichever image dropzone is focused/clicked into; otherwise use the next empty slot;
   // if every slot is full, create a new one automatically (up to the max).
-  let slotId = findFocusedSlotId();
+  let slotId = focused;
   if (slotId === null) {
     const emptySlot = slots.find(s => !s.img);
     if (emptySlot) {
@@ -601,8 +692,12 @@ function drawComposition(canvas, ctx, scale){
   canvas.width = layout.W;
   canvas.height = layout.H;
 
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, layout.W, layout.H);
+  if (bgImage) {
+    drawBackgroundCover(ctx, bgImage, layout.W, layout.H);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, layout.W, layout.H);
+  }
 
   ctx.font = `400 ${layout.fontSize}px 'Inter', sans-serif`;
   ctx.textBaseline = 'top';
