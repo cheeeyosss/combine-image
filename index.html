@@ -98,6 +98,10 @@ input[type="text"]:focus{outline:none;border-color:var(--stamp);box-shadow:0 0 0
 .slider-control input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--navy);cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);}
 .slider-control input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--navy);cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);}
 .slider-value{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:var(--navy);min-width:42px;text-align:right;}
+.color-mode-group{display:flex;gap:10px;flex-wrap:wrap;}
+.color-mode-btn{flex:1;min-width:170px;padding:11px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
+.color-mode-btn:hover{border-color:var(--stamp);}
+.color-mode-btn.active{background:var(--navy);border-color:var(--navy);color:#fff;}
 button.secondary{background:#fff;color:var(--navy);border:1.5px dashed var(--line);padding:12px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;}
 button.secondary:hover{border-color:var(--stamp);background:#fff8f4;}
 button.secondary:disabled{opacity:.4;cursor:not-allowed;}
@@ -174,10 +178,19 @@ footer svg{flex:none;margin-top:2px;color:var(--ok);}
       </div>
 
       <div class="slider-row">
-        <label class="field-label" for="ribbonDarkness">Kecerahan &amp; kegelapan warna</label>
+        <label class="field-label">Warna Teks Palang</label>
+        <p class="toggle-hint" style="margin:0 0 10px;">Pilih warna yang kontra dengan latar gambar anda supaya watermark kelihatan jelas.</p>
+        <div class="color-mode-group">
+          <button type="button" class="color-mode-btn active" id="btnColorWhite" data-mode="white">Putih — untuk gambar gelap</button>
+          <button type="button" class="color-mode-btn" id="btnColorBlack" data-mode="black">Hitam — untuk gambar cerah</button>
+        </div>
+      </div>
+
+      <div class="slider-row">
+        <label class="field-label" for="ribbonOpacity">Ketelusan warna (kiri = lut sinar, kanan = pekat)</label>
         <div class="slider-control">
-          <input type="range" id="ribbonDarkness" min="0" max="100" value="80" step="5">
-          <span class="slider-value" id="ribbonDarknessValue">80%</span>
+          <input type="range" id="ribbonOpacity" min="10" max="100" value="90" step="5">
+          <span class="slider-value" id="ribbonOpacityValue">90%</span>
         </div>
       </div>
     </div>
@@ -254,12 +267,15 @@ const tujuanInput = document.getElementById('tujuan');
 const tujuanPreviewText = document.getElementById('tujuanPreviewText');
 const ribbonScaleInput = document.getElementById('ribbonScale');
 const ribbonScaleValue = document.getElementById('ribbonScaleValue');
-const ribbonDarknessInput = document.getElementById('ribbonDarkness');
-const ribbonDarknessValue = document.getElementById('ribbonDarknessValue');
+const ribbonOpacityInput = document.getElementById('ribbonOpacity');
+const ribbonOpacityValue = document.getElementById('ribbonOpacityValue');
+const btnColorWhite = document.getElementById('btnColorWhite');
+const btnColorBlack = document.getElementById('btnColorBlack');
 
 let watermarkEnabled = watermarkToggle.checked;
 let ribbonScale = (parseInt(ribbonScaleInput.value, 10) || 90) / 100;
-let ribbonDarkness = parseInt(ribbonDarknessInput.value, 10) || 80;
+let ribbonOpacity = parseInt(ribbonOpacityInput.value, 10) || 90;
+let ribbonColorMode = 'white'; // 'white' text suits dark images, 'black' suits light/white images
 
 // ---------- Background image ----------
 let bgImage = null;
@@ -341,19 +357,15 @@ function getTujuanText(){
   return val ? val.toUpperCase() : '[TAIP TEKS ANDA]';
 }
 
-function getRibbonColor(darknessPct){
-  const t = Math.min(Math.max(darknessPct, 0), 100) / 100;
-  const light = {r:214, g:214, b:206};
-  const dark = {r:32, g:32, b:27};
-  const r = Math.round(light.r + (dark.r - light.r) * t);
-  const g = Math.round(light.g + (dark.g - light.g) * t);
-  const b = Math.round(light.b + (dark.b - light.b) * t);
-  return `${r},${g},${b}`;
+function getWatermarkRGB(mode){
+  return mode === 'white' ? '255,255,255' : '15,15,15';
 }
 
-function drawCenteredWatermarkText(ctx, bx, by, boxW, boxH, text, scale, darknessPct){
+function drawCenteredWatermarkText(ctx, bx, by, boxW, boxH, text, scale, colorMode, opacityPct){
   scale = scale || 1;
-  const rgb = getRibbonColor(darknessPct === undefined ? 80 : darknessPct);
+  const rgb = getWatermarkRGB(colorMode);
+  const outlineRgb = colorMode === 'white' ? '0,0,0' : '255,255,255';
+  const alpha = Math.min(Math.max(opacityPct, 0), 100) / 100;
 
   ctx.save();
   ctx.beginPath();
@@ -373,11 +385,11 @@ function drawCenteredWatermarkText(ctx, bx, by, boxW, boxH, text, scale, darknes
   ctx.textBaseline = 'middle';
 
   ctx.lineWidth = fontSize * 0.32;
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.strokeStyle = `rgba(${outlineRgb},${(0.85 * alpha).toFixed(3)})`;
   ctx.lineJoin = 'round';
   ctx.strokeText(text, 0, 0);
 
-  ctx.fillStyle = `rgba(${rgb},0.95)`;
+  ctx.fillStyle = `rgba(${rgb},${alpha.toFixed(3)})`;
   ctx.fillText(text, 0, 0);
 
   ctx.restore();
@@ -400,11 +412,20 @@ ribbonScaleInput.addEventListener('input', () => {
   updateState();
 });
 
-ribbonDarknessInput.addEventListener('input', () => {
-  ribbonDarkness = parseInt(ribbonDarknessInput.value, 10);
-  ribbonDarknessValue.textContent = ribbonDarknessInput.value + '%';
+ribbonOpacityInput.addEventListener('input', () => {
+  ribbonOpacity = parseInt(ribbonOpacityInput.value, 10);
+  ribbonOpacityValue.textContent = ribbonOpacityInput.value + '%';
   updateState();
 });
+
+function setRibbonColorMode(mode){
+  ribbonColorMode = mode;
+  btnColorWhite.classList.toggle('active', mode === 'white');
+  btnColorBlack.classList.toggle('active', mode === 'black');
+  updateState();
+}
+btnColorWhite.addEventListener('click', () => setRibbonColorMode('white'));
+btnColorBlack.addEventListener('click', () => setRibbonColorMode('black'));
 
 function createSlot(){
   const id = nextId++;
@@ -708,7 +729,7 @@ function drawComposition(canvas, ctx, scale){
     const drawnRect = drawImageContain(ctx, item.slot.img, item.imgBox.x, item.imgBox.y, item.imgBox.w, item.imgBox.h);
     if (watermarkEnabled) {
       const text = getTujuanText();
-      drawCenteredWatermarkText(ctx, drawnRect.x, drawnRect.y, drawnRect.w, drawnRect.h, text, ribbonScale * scale, ribbonDarkness);
+      drawCenteredWatermarkText(ctx, drawnRect.x, drawnRect.y, drawnRect.w, drawnRect.h, text, ribbonScale * scale, ribbonColorMode, ribbonOpacity);
     }
     if (item.commentBox) {
       ctx.fillStyle = '#FCFAF4';
