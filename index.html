@@ -680,12 +680,19 @@ function drawImageContain(ctx, img, x, y, boxW, boxH){
   const h = img.height * scale;
   const dx = x + (boxW - w) / 2;
   const dy = y + (boxH - h) / 2;
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#DCD5C4';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x, y, boxW, boxH);
-  ctx.fillRect(x, y, boxW, boxH);
-  ctx.drawImage(img, dx, dy, w, h);
+
+  if (bgImage) {
+    // A custom background is active: let it show through any leftover space
+    // in this box instead of covering it with a white fill.
+    ctx.drawImage(img, dx, dy, w, h);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#DCD5C4';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, boxW, boxH);
+    ctx.fillRect(x, y, boxW, boxH);
+    ctx.drawImage(img, dx, dy, w, h);
+  }
 }
 
 function drawComposition(canvas, ctx, scale){
