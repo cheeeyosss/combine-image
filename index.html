@@ -22,6 +22,7 @@
 <meta name="twitter:description" content="Gabungkan beberapa gambar dan komen menjadi satu JPEG. Semua proses dibuat terus dalam pelayar anda.">
 <meta name="twitter:image" content="https://combine-image.ceos.workers.dev/share-preview.png">
 
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -350,7 +351,7 @@ function getRibbonColor(darknessPct){
   return `${r},${g},${b}`;
 }
 
-function drawCornerRibbon(ctx, bx, by, boxW, boxH, text, scale, darknessPct){
+function drawCenteredWatermarkText(ctx, bx, by, boxW, boxH, text, scale, darknessPct){
   scale = scale || 1;
   const rgb = getRibbonColor(darknessPct === undefined ? 80 : darknessPct);
 
@@ -359,23 +360,13 @@ function drawCornerRibbon(ctx, bx, by, boxW, boxH, text, scale, darknessPct){
   ctx.rect(bx, by, boxW, boxH);
   ctx.clip();
 
-  const ribbonLen = Math.min(boxW, boxH) * 1.15;
-  const bandHeight = Math.max(Math.min(boxW, boxH) * 0.055, 9) * scale;
-  const anchorX = bx + boxW - Math.min(boxW, boxH) * 0.22;
-  const anchorY = by + Math.min(boxW, boxH) * 0.22;
+  const centerX = bx + boxW / 2;
+  const centerY = by + boxH / 2;
 
-  ctx.translate(anchorX, anchorY);
+  ctx.translate(centerX, centerY);
   ctx.rotate(45 * Math.PI / 180);
 
-  const lineW = Math.max(bandHeight * 0.06, 1.4);
-  ctx.strokeStyle = `rgba(${rgb},0.95)`;
-  ctx.lineWidth = lineW;
-  ctx.strokeRect(-ribbonLen, -bandHeight/2, ribbonLen*2, bandHeight);
-
-  const fontSize = Math.max(
-    Math.min(bandHeight * 0.42, boxW * 0.016 * scale),
-    6.5 * scale
-  );
+  const fontSize = Math.max(Math.min(boxW, boxH) * 0.075 * scale, 8 * scale);
 
   ctx.font = `600 ${fontSize}px 'IBM Plex Mono', monospace`;
   ctx.textAlign = 'center';
@@ -384,10 +375,10 @@ function drawCornerRibbon(ctx, bx, by, boxW, boxH, text, scale, darknessPct){
   ctx.lineWidth = fontSize * 0.32;
   ctx.strokeStyle = 'rgba(255,255,255,0.85)';
   ctx.lineJoin = 'round';
-  ctx.strokeText(text, 0, 1);
+  ctx.strokeText(text, 0, 0);
 
   ctx.fillStyle = `rgba(${rgb},0.95)`;
-  ctx.fillText(text, 0, 1);
+  ctx.fillText(text, 0, 0);
 
   ctx.restore();
 }
@@ -693,6 +684,8 @@ function drawImageContain(ctx, img, x, y, boxW, boxH){
     ctx.fillRect(x, y, boxW, boxH);
     ctx.drawImage(img, dx, dy, w, h);
   }
+
+  return { x: dx, y: dy, w, h }; // the actual drawn image bounds (excludes any pillarbox/letterbox space)
 }
 
 function drawComposition(canvas, ctx, scale){
@@ -712,10 +705,10 @@ function drawComposition(canvas, ctx, scale){
   ctx.fillStyle = '#2B2A26';
 
   layout.items.forEach(item => {
-    drawImageContain(ctx, item.slot.img, item.imgBox.x, item.imgBox.y, item.imgBox.w, item.imgBox.h);
+    const drawnRect = drawImageContain(ctx, item.slot.img, item.imgBox.x, item.imgBox.y, item.imgBox.w, item.imgBox.h);
     if (watermarkEnabled) {
       const text = getTujuanText();
-      drawCornerRibbon(ctx, item.imgBox.x, item.imgBox.y, item.imgBox.w, item.imgBox.h, text, ribbonScale * scale, ribbonDarkness);
+      drawCenteredWatermarkText(ctx, drawnRect.x, drawnRect.y, drawnRect.w, drawnRect.h, text, ribbonScale * scale, ribbonDarkness);
     }
     if (item.commentBox) {
       ctx.fillStyle = '#FCFAF4';
