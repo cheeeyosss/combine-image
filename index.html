@@ -729,7 +729,7 @@ function drawComposition(canvas, ctx, scale){
     const drawnRect = drawImageContain(ctx, item.slot.img, item.imgBox.x, item.imgBox.y, item.imgBox.w, item.imgBox.h);
     if (watermarkEnabled) {
       const text = getTujuanText();
-      drawCenteredWatermarkText(ctx, drawnRect.x, drawnRect.y, drawnRect.w, drawnRect.h, text, ribbonScale * scale, ribbonColorMode, ribbonOpacity);
+      drawCenteredWatermarkText(ctx, drawnRect.x, drawnRect.y, drawnRect.w, drawnRect.h, text, ribbonScale, ribbonColorMode, ribbonOpacity);
     }
     if (item.commentBox) {
       ctx.fillStyle = '#FCFAF4';
