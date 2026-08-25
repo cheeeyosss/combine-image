@@ -484,7 +484,8 @@ document.addEventListener('paste', (e) => {
 // ---------- Layout / rendering ----------
 
 const IMG_BOX_W = 900;      // logical width (preview units) for each image box
-const IMG_BOX_H = 420;      // fixed height for every image box -> keeps all images same size
+const IMG_BOX_H = 420;      // base height for every image box -> keeps all images same size
+const NO_COMMENT_BONUS = 160; // extra height added to the image when it has no comment (reclaims the freed space)
 const MARGIN = 40;
 const GAP_AFTER_IMAGE = 14;
 const GAP_BETWEEN_ITEMS = 30;
@@ -524,6 +525,7 @@ function computeLayout(ctx, scale){
   const gapAfterImgS = GAP_AFTER_IMAGE * scale;
   const gapBetweenS = GAP_BETWEEN_ITEMS * scale;
   const imgH = IMG_BOX_H * scale;
+  const noCommentBonusH = NO_COMMENT_BONUS * scale;
   const fontSize = COMMENT_FONT_SIZE * scale;
   const lineHeight = COMMENT_LINE_HEIGHT * scale;
   const padV = COMMENT_PAD_V * scale;
@@ -535,13 +537,15 @@ function computeLayout(ctx, scale){
   const items = activeSlots().map(slot => {
     const lines = wrapText(ctx, (slot.comment || '').trim(), maxTextWidth);
     const commentH = lines.length ? (lines.length * lineHeight + padV * 2) : 0;
-    return { slot, lines, commentH };
+    // No comment -> reclaim that space by making this image taller instead of leaving a gap
+    const thisImgH = lines.length ? imgH : (imgH + noCommentBonusH);
+    return { slot, lines, commentH, imgH: thisImgH };
   });
 
   let y = marginS;
   items.forEach((item, idx) => {
-    item.imgBox = { x: marginS, y, w: w - marginS * 2, h: imgH };
-    y += imgH + gapAfterImgS;
+    item.imgBox = { x: marginS, y, w: w - marginS * 2, h: item.imgH };
+    y += item.imgH + gapAfterImgS;
     if (item.lines.length) {
       item.commentBox = { x: marginS, y, w: w - marginS * 2, h: item.commentH };
       y += item.commentH;
